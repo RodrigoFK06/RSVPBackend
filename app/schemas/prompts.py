@@ -4,7 +4,7 @@ from typing import List, Optional, Dict
 
 class PromptInput(BaseModel):
     text: str
-    user_id: Optional[str] = None
+    # user_id: Optional[str] = None # REMOVE THIS LINE
 
 
 class PromptOutput(BaseModel):
