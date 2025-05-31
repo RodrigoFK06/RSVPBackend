@@ -12,7 +12,7 @@ from app.models.rsvp_session import RsvpSession
 from app.models.user import User
 from app.models.quiz_attempt import QuizAttempt
 from app.api.routes import router
-from app.api import rsvp_routes, auth_routes, quiz_routes, stats_routes
+from app.api import rsvp_routes, auth_routes, quiz_routes, stats_routes, assistant_routes
 
 # Cargar variables del archivo .env
 load_dotenv()
@@ -68,3 +68,4 @@ app.include_router(rsvp_routes.router)
 app.include_router(auth_routes.router)
 app.include_router(quiz_routes.router)
 app.include_router(stats_routes.router)
+app.include_router(assistant_routes.router)

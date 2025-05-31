@@ -124,3 +124,77 @@ async def assess_text_parameters(text_content: str) -> dict:
         logger.error(f"Unexpected error in text assessment: {e}")
 
     return assessment_results
+
+
+async def get_contextual_assistant_response(query: str, context_text: str) -> str:
+    # Basic check for context length if needed, similar to assess_text_parameters
+    max_context_chars = 15000 # Example limit for context + query
+
+    # Truncate context_text if it's too long to avoid overly large prompts
+    # The query itself is usually short, but context can be large.
+    # A more sophisticated approach might summarize context if it's very large.
+    if len(context_text) > max_context_chars:
+        context_text_for_prompt = context_text[:max_context_chars] + "\n... [context truncated] ..."
+        logger.warning(f"Context text truncated to {max_context_chars} chars for AI assistant prompt.")
+    else:
+        context_text_for_prompt = context_text
+
+    prompt = f"""
+    You are a helpful AI assistant. Answer the user's query based *only* on the provided context text.
+    If the answer cannot be found in the context text, clearly state that. Do not use external knowledge.
+
+    Context Text:
+    ---
+    {context_text_for_prompt}
+    ---
+
+    User's Query: "{query}"
+
+    Answer:
+    """
+
+    # Using the generic ask_gemini function if it's suitable, or make a direct call
+    # Assuming ask_gemini is refactored to take a model_url or uses a general one.
+    # For simplicity, let's use the direct call pattern here if ask_gemini isn't perfectly matched.
+
+    gemini_endpoint_url = GEMINI_PRO_URL # Using Gemini Pro for assistant
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    if not api_key:
+        logger.error("GEMINI_API_KEY not found for assistant.")
+        return "Error: AI service is not configured."
+
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    ai_response_text = "Sorry, I couldn't process your request at the moment."
+    response_data_for_logging = None
+
+    try:
+        async with httpx.AsyncClient(timeout=45.0) as client: # Timeout for assistant response
+            res = await client.post(
+                f"{gemini_endpoint_url}?key={api_key}",
+                headers={"Content-Type": "application/json"},
+                json=payload
+            )
+            res.raise_for_status()
+
+        response_data_for_logging = res.json()
+        # Ensure "candidates" and parts exist before accessing
+        if response_data_for_logging.get("candidates") and \
+           response_data_for_logging["candidates"][0].get("content") and \
+           response_data_for_logging["candidates"][0]["content"].get("parts"):
+            ai_response_text = response_data_for_logging["candidates"][0]["content"]["parts"][0]["text"].strip()
+        else:
+            logger.warning(f"Unexpected Gemini response structure for assistant: {response_data_for_logging}")
+            ai_response_text = "Sorry, I received an unexpected response from the AI."
+
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error calling Gemini for assistant: {e.response.status_code} - {e.response.text}")
+        ai_response_text = "Error communicating with AI service."
+    except (KeyError, IndexError, json.JSONDecodeError) as e: # Added JSONDecodeError just in case
+        logger.error(f"Error processing Gemini response for assistant: {e}. Response: {response_data_for_logging if response_data_for_logging else 'N/A'}")
+        ai_response_text = "Error processing AI response."
+    except Exception as e:
+        logger.error(f"Unexpected error in assistant response generation: {e}")
+        ai_response_text = "An unexpected error occurred."
+
+    return ai_response_text
