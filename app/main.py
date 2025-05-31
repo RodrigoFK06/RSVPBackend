@@ -2,8 +2,9 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from loguru import logger
 import sys
+import certifi # Added
 from beanie import init_beanie
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorClient # Ensure this is imported
 from dotenv import load_dotenv
 import os
 
@@ -59,8 +60,30 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 # Inicializar MongoDB con Beanie
 @app.on_event("startup")
 async def app_init():
-    client = AsyncIOMotorClient(mongo_url)
-    await init_beanie(database=client["rsvp_app"], document_models=[ReadingSession, RsvpSession, User, QuizAttempt]) # Added QuizAttempt
+    # mongo_url should already be defined from os.getenv("MONGO_URL")
+    logger.info(f"Attempting to connect to MongoDB with URL: {mongo_url}") # Added log
+    try:
+        client = AsyncIOMotorClient(
+            mongo_url,
+            tlsCAFile=certifi.where() # Use certifi's CA bundle
+        )
+        # Optional: Verify connection with a simple command, though Beanie's init will do this too
+        # await client.admin.command('ping')
+        # logger.info("Successfully pinged MongoDB server.")
+
+        await init_beanie(
+            database=client.get_default_database(), # Use get_default_database() if db name is in MONGO_URL
+            # Or client["rsvp_app"] if you want to hardcode db name here and it's not in MONGO_URL
+            document_models=[ReadingSession, RsvpSession, User, QuizAttempt]
+        )
+        logger.info("Beanie initialized successfully with MongoDB.")
+    except Exception as e:
+        logger.error(f"Failed to connect to MongoDB or initialize Beanie: {e}", exc_info=True)
+        # Depending on the severity, you might want to sys.exit(1) here
+        # or let FastAPI handle the startup failure.
+        # For now, logging the error is the primary action.
+        # Re-raising the exception will cause FastAPI startup to fail, which is appropriate.
+        raise e
 
 # Registrar rutas de la API (ambas)
 app.include_router(router)
