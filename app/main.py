@@ -72,8 +72,7 @@ async def app_init():
         # logger.info("Successfully pinged MongoDB server.")
 
         await init_beanie(
-            database=client.get_default_database(), # Use get_default_database() if db name is in MONGO_URL
-            # Or client["rsvp_app"] if you want to hardcode db name here and it's not in MONGO_URL
+            database=client["rsvp_app"], # Explicitly specify the database name
             document_models=[ReadingSession, RsvpSession, User, QuizAttempt]
         )
         logger.info("Beanie initialized successfully with MongoDB.")
