@@ -10,3 +10,7 @@ python-jose[cryptography]
 email-validator
 loguru
 pymongo
+pytest
+pytest-asyncio
+asgi-lifespan
+pytest-cov
