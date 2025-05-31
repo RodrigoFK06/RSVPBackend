@@ -3,7 +3,7 @@ from typing import List, Optional
 
 class RsvpInput(BaseModel):
     topic: str
-    user_id: Optional[str] = None  # 👈 nuevo
+    # user_id: Optional[str] = None # REMOVE THIS LINE
 
 class RsvpOutput(BaseModel):
     id: str
