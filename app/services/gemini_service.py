@@ -5,7 +5,6 @@ from loguru import logger # Added
 from app.schemas.prompts import PromptOutput
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-GEMINI_PRO_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent" # For potentially longer/complex tasks
 
 async def ask_gemini(prompt: str, model_url: str = GEMINI_URL) -> str: # Added model_url parameter
     payload = {
@@ -78,7 +77,7 @@ async def assess_text_parameters(text_content: str) -> dict:
     json_text_response = "" # Initialize for logging
 
     try:
-        gemini_endpoint_url = GEMINI_PRO_URL # Using Gemini Pro for this analysis
+        gemini_endpoint_url = GEMINI_URL # Using Gemini Pro for this analysis
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             logger.error("GEMINI_API_KEY not found for text assessment.")
@@ -157,7 +156,7 @@ async def get_contextual_assistant_response(query: str, context_text: str) -> st
     # Assuming ask_gemini is refactored to take a model_url or uses a general one.
     # For simplicity, let's use the direct call pattern here if ask_gemini isn't perfectly matched.
 
-    gemini_endpoint_url = GEMINI_PRO_URL # Using Gemini Pro for assistant
+    gemini_endpoint_url = GEMINI_URL # Using Gemini Pro for assistant
     api_key = os.getenv("GEMINI_API_KEY")
 
     if not api_key:
