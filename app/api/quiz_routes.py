@@ -4,6 +4,7 @@ from loguru import logger
 from app.schemas.quiz import QuizCreateInput, QuizOutput, QuizQuestion, QuizValidateInput, QuizValidateOutput, QuizQuestionFeedback
 from app.models.session import ReadingSession
 from app.models.user import User
+from app.models.rsvp_session import RsvpSession # Added import
 from app.core.security import get_current_active_user
 from app.services import quiz_service # Assuming __init__.py in services
 from app.services.gemini_service import assess_text_parameters # Add this import
@@ -20,20 +21,41 @@ async def create_quiz(
     text_to_use = ""
     session_id_for_quiz = None
 
-    if quiz_input.session_id:
+    if quiz_input.rsvp_session_id:
+        rsvp_session = await RsvpSession.get(quiz_input.rsvp_session_id)
+        if not rsvp_session:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RsvpSession not found")
+        if rsvp_session.user_id != str(current_user.id):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have access to this RSVP session's content")
+        if not rsvp_session.text: # Ensure RsvpSession has text
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="RsvpSession has no text content to create a quiz from.")
+
+        text_to_use = rsvp_session.text
+
+        # Create a new ReadingSession for this quiz
+        ai_params = await assess_text_parameters(text_to_use)
+        new_reading_session = ReadingSession(
+            text=text_to_use,
+            user_id=str(current_user.id),
+            # Potentially link to rsvp_session: rsvp_session_origin_id=str(rsvp_session.id),
+            ai_estimated_ideal_reading_time_seconds=ai_params.get("ideal_time_seconds"),
+            ai_text_difficulty=ai_params.get("difficulty", "unknown")
+        )
+        new_reading_session.update_word_count()
+        await new_reading_session.insert()
+        session_id_for_quiz = str(new_reading_session.id)
+        logger.info(f"Created new ReadingSession {session_id_for_quiz} for quiz from RsvpSession {quiz_input.rsvp_session_id}")
+
+    elif quiz_input.session_id:
         session = await ReadingSession.get(quiz_input.session_id)
         if not session:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ReadingSession not found")
         if not session.text:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="ReadingSession has no text content")
-        # Ensure user has access to this session if needed (e.g. session.user_id == current_user.id)
-        # For now, assuming any authenticated user can generate a quiz for any session ID if they know it.
-        # Or, more strictly:
         if session.user_id != str(current_user.id):
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have access to this session's quiz")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have access to this session's quiz")
 
         text_to_use = session.text
-        # session_to_use = session # Not strictly needed here as quiz_service re-fetches
         session_id_for_quiz = str(session.id)
 
     elif quiz_input.text:

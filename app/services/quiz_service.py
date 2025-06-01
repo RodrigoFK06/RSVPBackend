@@ -16,7 +16,7 @@ from app.models.quiz_attempt import QuizAttempt # import QuizAttempt
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # Fallback URL if not imported
-GEMINI_QUIZ_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+GEMINI_QUIZ_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 
 async def generate_quiz_questions_from_text(text_content: str, num_questions: int = 5, num_mc_options: int = 4) -> List[QuizQuestion]:
