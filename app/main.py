@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from loguru import logger
 import sys
-import certifi # Added
+# import certifi # Removed as it's no longer directly used here
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient # Ensure this is imported
 from dotenv import load_dotenv
@@ -63,10 +63,9 @@ async def app_init():
     # mongo_url should already be defined from os.getenv("MONGO_URL")
     logger.info(f"Attempting to connect to MongoDB with URL: {mongo_url}") # Added log
     try:
-        client = AsyncIOMotorClient(
-            mongo_url,
-            tls=False # Attempt to disable TLS
-        )
+        # Revert client initialization to its original simple form
+        client = AsyncIOMotorClient(mongo_url)
+
         # Optional: Verify connection with a simple command, though Beanie's init will do this too
         # await client.admin.command('ping')
         # logger.info("Successfully pinged MongoDB server.")
