@@ -7,7 +7,7 @@ from typing import List
 from app.schemas.quiz import QuizQuestionFeedback
 
 class QuizAttempt(Document):
-    reading_session_id: Indexed(str)
+    rsvp_session_id: Indexed(str)
     user_id: Indexed(str)
     results: List[QuizQuestionFeedback] # Stores feedback for each question answered
     overall_score: float
