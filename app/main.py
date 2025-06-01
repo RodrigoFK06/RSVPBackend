@@ -65,8 +65,7 @@ async def app_init():
     try:
         client = AsyncIOMotorClient(
             mongo_url,
-            tlsCAFile=certifi.where(), # Use certifi's CA bundle
-            tlsAllowInvalidCertificates=True # Add this line
+            tls=False # Attempt to disable TLS
         )
         # Optional: Verify connection with a simple command, though Beanie's init will do this too
         # await client.admin.command('ping')
