@@ -7,7 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 import os
 
-from app.models.session import ReadingSession
+#from app.models.session import ReadingSession
 from app.models.rsvp_session import RsvpSession
 from app.models.user import User
 from app.models.quiz_attempt import QuizAttempt
@@ -60,7 +60,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 @app.on_event("startup")
 async def app_init():
     client = AsyncIOMotorClient(mongo_url)
-    await init_beanie(database=client["rsvp_app"], document_models=[ReadingSession, RsvpSession, User, QuizAttempt]) # Added QuizAttempt
+    await init_beanie(database=client["rsvp_app"], document_models=[ RsvpSession, User, QuizAttempt]) # Added QuizAttempt
 
 # Registrar rutas de la API (ambas)
 app.include_router(router)
