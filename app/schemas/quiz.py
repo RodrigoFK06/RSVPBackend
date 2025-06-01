@@ -13,26 +13,18 @@ class QuizQuestion(BaseModel):
         orm_mode = True
 
 class QuizCreateInput(BaseModel):
-    text: Optional[str] = None
-    session_id: Optional[str] = None # To use text from an existing ReadingSession
-    rsvp_session_id: Optional[str] = None
+    rsvp_session_id: str
 
     @model_validator(mode='before')
     @classmethod
     def check_input_source(cls, values):
-        provided_sources = sum([
-            1 for v in [values.get('text'), values.get('session_id'), values.get('rsvp_session_id')] if v is not None
-        ])
-        if provided_sources == 0:
-            raise ValueError('Either text, session_id (for ReadingSession), or rsvp_session_id must be provided.')
-        if provided_sources > 1:
-            raise ValueError('Provide only one of text, session_id (for ReadingSession), or rsvp_session_id.')
-        if values.get('text') and not values.get('text').strip(): # Keep existing check for empty text
-            raise ValueError('text cannot be empty or just whitespace if provided.')
+        if not values.get('rsvp_session_id'):
+            raise ValueError('rsvp_session_id must be provided.')
+        # Optional: check if rsvp_session_id is a valid format if necessary
         return values
 
 class QuizOutput(BaseModel):
-    reading_session_id: Optional[str] = None # ID of the session if quiz is attached
+    rsvp_session_id: str
     questions: List[QuizQuestion]
 
 class QuizAnswerInput(BaseModel):
@@ -40,7 +32,7 @@ class QuizAnswerInput(BaseModel):
     user_answer: str
 
 class QuizValidateInput(BaseModel):
-    reading_session_id: str # Identifies the session containing the quiz and questions
+    rsvp_session_id: str
     answers: List[QuizAnswerInput]
 
 class QuizQuestionFeedback(BaseModel):
@@ -50,6 +42,6 @@ class QuizQuestionFeedback(BaseModel):
     correct_answer: Optional[str] = None # To show the user the correct answer
 
 class QuizValidateOutput(BaseModel):
-    reading_session_id: str
+    rsvp_session_id: str
     overall_score: float # e.g., percentage
     results: List[QuizQuestionFeedback]

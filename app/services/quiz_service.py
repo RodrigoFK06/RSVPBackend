@@ -6,7 +6,7 @@ from typing import List, Optional
 from loguru import logger
 
 from app.schemas.quiz import QuizQuestion, QuizOutput, QuizAnswerInput, QuizQuestionFeedback
-from app.models.session import ReadingSession
+from app.models.rsvp_session import RsvpSession # Added import
 from app.models.user import User # For type hinting if needed
 from app.models.quiz_attempt import QuizAttempt # import QuizAttempt
 
@@ -115,17 +115,17 @@ async def generate_quiz_questions_from_text(text_content: str, num_questions: in
 
     return quiz_questions
 
-async def create_or_update_quiz_for_session(session_id: str, text_content: str, user: User) -> ReadingSession:
-    session = await ReadingSession.get(session_id)
+async def create_or_update_quiz_for_session(rsvp_session_id: str, text_content: str, user: User) -> RsvpSession:
+    session = await RsvpSession.get(rsvp_session_id)
     if not session:
-        raise FileNotFoundError("ReadingSession not found") # Or HTTPException
+        raise FileNotFoundError("RsvpSession not found") # Or HTTPException
 
     # For now, always generate new questions. Could add logic to check if quiz_questions already exist.
     questions = await generate_quiz_questions_from_text(text_content)
 
     if not questions:
             # Fallback or error if no questions could be generated
-        logger.warning(f"No quiz questions generated for session {session_id}")
+        logger.warning(f"No quiz questions generated for session {rsvp_session_id}")
         session.quiz_questions = [] # Ensure it's an empty list not None
     else:
         session.quiz_questions = questions
@@ -197,13 +197,13 @@ async def evaluate_open_ended_answer_with_gemini(question_text: str, correct_ans
 
 
 async def validate_and_score_quiz_answers(
-    reading_session_id: str,
+    rsvp_session_id: str,
     user_answers: List[QuizAnswerInput],
     user: User
 ) -> QuizAttempt:
-    session = await ReadingSession.get(reading_session_id)
+    session = await RsvpSession.get(rsvp_session_id)
     if not session:
-        raise FileNotFoundError("ReadingSession not found")
+        raise FileNotFoundError("RsvpSession not found")
     if not session.quiz_questions:
         raise ValueError("No quiz questions found for this session")
 
@@ -215,7 +215,7 @@ async def validate_and_score_quiz_answers(
     for answer_input in user_answers:
         question = questions_map.get(answer_input.question_id)
         if not question:
-            logger.warning(f"Question ID {answer_input.question_id} not found in session {reading_session_id}. Skipping.")
+            logger.warning(f"Question ID {answer_input.question_id} not found in session {rsvp_session_id}. Skipping.")
             feedback_results.append(QuizQuestionFeedback(
                 question_id=answer_input.question_id,
                 is_correct=False,
@@ -260,7 +260,7 @@ async def validate_and_score_quiz_answers(
     overall_score = (correct_answers_count / len(session.quiz_questions)) * 100 if session.quiz_questions else 0
 
     quiz_attempt = QuizAttempt(
-        reading_session_id=str(session.id), # Ensure it's str
+        rsvp_session_id=str(session.id), # Ensure it's str
         user_id=str(user.id), # Ensure it's str
         results=feedback_results,
         overall_score=round(overall_score, 2)
