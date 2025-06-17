@@ -16,6 +16,6 @@ async def connect_to_mongo() -> AsyncIOMotorClient:
         raise ValueError("MONGO_URL environment variable is not set")
 
     client = AsyncIOMotorClient(mongo_url)
-    db_name = mongo_url.rsplit("/", 1)[-1]
-    await init_beanie(database=client[db_name], document_models=[RsvpSession, User, QuizAttempt])
+    db = client.get_default_database()  # ✅ forma segura y robusta
+    await init_beanie(database=db, document_models=[RsvpSession, User, QuizAttempt])
     return client
