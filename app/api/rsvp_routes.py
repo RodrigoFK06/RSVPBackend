@@ -17,9 +17,10 @@ async def generate_rsvp(input_data: RsvpInput, current_user: User = Depends(get_
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
-        # Ensure logger is imported and used if needed
-        logger.error(f"Error generating RSVP for user {current_user.email}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error generating RSVP content")
+        logger.error(
+            f"Error generating RSVP for user {current_user.email}: {e}", exc_info=True
+        )
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @router.get("/api/rsvp/{session_id}", response_model=RsvpOutput)
