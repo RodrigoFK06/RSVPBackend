@@ -2,15 +2,12 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from loguru import logger
 import sys
-from beanie import init_beanie
-from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 import os
 
+from app.db.connection import connect_to_mongo
+
 #from app.models.session import ReadingSession
-from app.models.rsvp_session import RsvpSession
-from app.models.user import User
-from app.models.quiz_attempt import QuizAttempt
 from app.api.routes import router
 from app.api import rsvp_routes, auth_routes, quiz_routes, stats_routes, assistant_routes
 
@@ -59,8 +56,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 # Inicializar MongoDB con Beanie
 @app.on_event("startup")
 async def app_init():
-    client = AsyncIOMotorClient(mongo_url)
-    await init_beanie(database=client["rsvp_app"], document_models=[ RsvpSession, User, QuizAttempt]) # Added QuizAttempt
+    await connect_to_mongo()
 
 # Registrar rutas de la API (ambas)
 app.include_router(router)
