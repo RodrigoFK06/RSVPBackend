@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from loguru import logger
 from app.schemas.rsvp import RsvpInput, RsvpOutput
 from app.services.rsvp_service import ask_gemini_for_rsvp
@@ -23,13 +23,19 @@ async def generate_rsvp(input_data: RsvpInput, current_user: User = Depends(get_
 
 
 @router.get("/api/rsvp/{session_id}", response_model=RsvpOutput)
-async def get_rsvp_session(session_id: str = Path(..., description="ID de la sesión RSVP")):
+async def get_rsvp_session(
+    session_id: str = Path(..., description="ID de la sesión RSVP"),
+    current_user: User = Depends(get_current_active_user),
+):
     session = await RsvpSession.get(session_id)
     if not session:
-        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sesión no encontrada")
+
+    if session.user_id != str(current_user.id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not own this session")
 
     return RsvpOutput(
         id=str(session.id),
         text=session.text,
-        words=session.words
+        words=session.words,
     )
