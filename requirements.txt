@@ -1,8 +1,8 @@
-fastapi
+fastapi>=0.110
 uvicorn[standard]
 gunicorn
 beanie
-pydantic
+pydantic>=2
 python-dotenv
 httpx
 passlib[bcrypt]
