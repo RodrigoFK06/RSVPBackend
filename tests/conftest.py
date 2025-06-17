@@ -1,13 +1,37 @@
-import pytest
-import pytest_asyncio # For async fixtures
-from httpx import AsyncClient
-from asgi_lifespan import LifespanManager
-from typing import AsyncGenerator, Callable # For type hinting
 import os
-import uuid # For generating unique emails
+
+# Ensure required env vars exist before importing the app
+os.environ.setdefault("MONGO_URL", "mongodb://localhost:27017/testdb")
+os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret")
+
+import pytest
+import pytest_asyncio  # For async fixtures
+from httpx import AsyncClient, ASGITransport
+from asgi_lifespan import LifespanManager
+from typing import AsyncGenerator
+import uuid  # For generating unique emails
+
+from mongomock_motor import AsyncMongoMockClient
+from beanie import init_beanie
+from app.models.rsvp_session import RsvpSession
+from app.models.user import User
+from app.models.quiz_attempt import QuizAttempt
 
 # Import your FastAPI app instance
 from app.main import app
+import app.main as main_module
+
+# Patch the database connection to use an in-memory MongoDB
+async def fake_connect_to_mongo():
+    client = AsyncMongoMockClient()
+    await init_beanie(
+        database=client["testdb"],
+        document_models=[RsvpSession, User, QuizAttempt],
+    )
+    return client
+
+main_module.connect_to_mongo = fake_connect_to_mongo
 # We won't use placeholder DB functions for now to keep it simpler.
 # Tests will run against the database configured by MONGO_URL.
 # For true isolation, a more complex setup would be needed.
@@ -19,7 +43,8 @@ async def test_app_instance():
 
 @pytest_asyncio.fixture(scope="function")
 async def client(test_app_instance) -> AsyncGenerator[AsyncClient, None]:
-    async with AsyncClient(app=test_app_instance, base_url="http://127.0.0.1:8000") as ac:
+    transport = ASGITransport(app=test_app_instance)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
 @pytest_asyncio.fixture(scope="function")
