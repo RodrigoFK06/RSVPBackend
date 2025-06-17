@@ -95,6 +95,7 @@ async def generate_quiz_questions_from_text(text_content: str, num_questions: in
             if q_data["question_type"] == "multiple_choice" and not isinstance(q_data.get("options"), list):
                 q_data["options"] = [] # Or handle as error
 
+            q_data.pop("id", None)
             quiz_questions.append(QuizQuestion(**q_data, id=q_id)) # Pass id explicitly
             if len(quiz_questions) >= num_questions: # Stop if we have enough
                 break
