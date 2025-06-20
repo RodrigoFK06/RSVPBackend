@@ -118,7 +118,7 @@ async def generate_quiz_questions_from_text(text_content: str, num_questions: in
 
 async def create_or_update_quiz_for_session(rsvp_session_id: str, text_content: str, user: User) -> RsvpSession:
     session = await RsvpSession.get(rsvp_session_id)
-    if not session:
+    if not session or session.deleted:
         raise FileNotFoundError("RsvpSession not found") # Or HTTPException
 
     # For now, always generate new questions. Could add logic to check if quiz_questions already exist.
@@ -200,10 +200,11 @@ async def evaluate_open_ended_answer_with_gemini(question_text: str, correct_ans
 async def validate_and_score_quiz_answers(
     rsvp_session_id: str,
     user_answers: List[QuizAnswerInput],
-    user: User
+    user: User,
+    reading_time_seconds: Optional[int] = None,
 ) -> QuizAttempt:
     session = await RsvpSession.get(rsvp_session_id)
-    if not session:
+    if not session or session.deleted:
         raise FileNotFoundError("RsvpSession not found")
     if not session.quiz_questions:
         raise ValueError("No quiz questions found for this session")
@@ -261,11 +262,19 @@ async def validate_and_score_quiz_answers(
     overall_score = (correct_answers_count / len(session.quiz_questions)) * 100 if session.quiz_questions else 0
 
     quiz_attempt = QuizAttempt(
-        rsvp_session_id=str(session.id), # Ensure it's str
-        user_id=str(user.id), # Ensure it's str
+        rsvp_session_id=str(session.id),
+        user_id=str(user.id),
         results=feedback_results,
-        overall_score=round(overall_score, 2)
+        overall_score=round(overall_score, 2),
     )
     await quiz_attempt.insert()
+
+    session.quiz_taken = True
+    session.quiz_score = quiz_attempt.overall_score
+    if reading_time_seconds is not None:
+        session.reading_time_seconds = reading_time_seconds
+        if session.word_count:
+            session.wpm = round((session.word_count / reading_time_seconds) * 60, 2)
+    await session.save()
 
     return quiz_attempt

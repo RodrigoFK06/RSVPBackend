@@ -10,6 +10,7 @@ from app.schemas.stats import (
     SessionStatDetail,
     PersonalizedFeedback,
 )
+from app.utils.timezone import convert_utc_to_local
 # Potentially an AI service for personalized feedback later
 # from app.services.gemini_service import generate_personalized_stats_feedback
 
@@ -20,7 +21,10 @@ class StatsService:
 
         # Fetch user's sessions and quiz attempts
         user_sessions = (
-            await RsvpSession.find(RsvpSession.user_id == user_id_str)
+            await RsvpSession.find(
+                RsvpSession.user_id == user_id_str,
+                RsvpSession.deleted == False,
+            )
             .sort(-RsvpSession.created_at)
             .to_list()
         )
@@ -31,16 +35,14 @@ class StatsService:
         # --- Calculate Overall Session Stats ---
         total_sessions_read = len(user_sessions)
         total_reading_time_seconds = sum(
-            session.ai_estimated_ideal_reading_time_seconds or 0
+            (session.reading_time_seconds or session.ai_estimated_ideal_reading_time_seconds or 0)
             for session in user_sessions
         )
         total_words_read = sum(session.word_count or 0 for session in user_sessions)
 
         average_wpm = None
         if total_reading_time_seconds > 0 and total_words_read > 0:
-            average_wpm = round(
-                (total_words_read / total_reading_time_seconds) * 60, 2
-            )
+            average_wpm = round((total_words_read / total_reading_time_seconds) * 60, 2)
 
         # --- Aggregate Quiz Attempts ---
         session_scores: Dict[str, List[float]] = {}
@@ -69,17 +71,11 @@ class StatsService:
         for session in user_sessions[:recent_sessions_limit]:
             scores = session_scores.get(str(session.id), [])
             quiz_score = max(scores) if scores else None
-            wpm = None
-            if (
-                session.ai_estimated_ideal_reading_time_seconds
-                and session.word_count
-            ):
-                wpm = round(
-                    (session.word_count
-                    / session.ai_estimated_ideal_reading_time_seconds)
-                    * 60,
-                    2,
-                )
+            wpm = session.wpm
+            if wpm is None and session.reading_time_seconds and session.word_count:
+                wpm = round((session.word_count / session.reading_time_seconds) * 60, 2)
+            elif wpm is None and session.ai_estimated_ideal_reading_time_seconds and session.word_count:
+                wpm = round((session.word_count / session.ai_estimated_ideal_reading_time_seconds) * 60, 2)
 
             text_snippet = (
                 session.text[:75] + "..."
@@ -92,13 +88,14 @@ class StatsService:
                     session_id=str(session.id),
                     text_snippet=text_snippet,
                     word_count=session.word_count,
-                    reading_time_seconds=session.ai_estimated_ideal_reading_time_seconds,
+                    reading_time_seconds=session.reading_time_seconds or session.ai_estimated_ideal_reading_time_seconds,
                     wpm=wpm,
-                    quiz_taken=bool(scores),
-                    quiz_score=quiz_score,
+                    quiz_taken=session.quiz_taken or bool(scores),
+                    quiz_score=session.quiz_score if session.quiz_score is not None else quiz_score,
                     ai_text_difficulty=session.ai_text_difficulty,
                     ai_estimated_ideal_reading_time_seconds=session.ai_estimated_ideal_reading_time_seconds,
                     created_at=session.created_at,
+                    created_at_local=convert_utc_to_local(session.created_at),
                 )
             )
 
