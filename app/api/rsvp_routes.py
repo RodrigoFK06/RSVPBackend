@@ -39,6 +39,10 @@ async def get_rsvp_session(
         id=str(session.id),
         text=session.text,
         words=session.words,
+        reading_time_seconds=session.reading_time_seconds,
+        wpm=session.wpm,
+        quiz_score=session.quiz_score,
+        quiz_taken=session.quiz_taken,
     )
 
 

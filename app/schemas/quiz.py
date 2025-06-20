@@ -34,6 +34,7 @@ class QuizAnswerInput(BaseModel):
 class QuizValidateInput(BaseModel):
     rsvp_session_id: str
     answers: List[QuizAnswerInput]
+    reading_time_seconds: Optional[int] = None
 
 class QuizQuestionFeedback(BaseModel):
     question_id: str
