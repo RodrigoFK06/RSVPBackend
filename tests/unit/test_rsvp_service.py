@@ -20,7 +20,7 @@ async def test_ask_gemini_for_rsvp_http_error(monkeypatch):
     monkeypatch.setattr(httpx.AsyncClient, 'post', mock_post)
     monkeypatch.setattr(rsvp_service, 'RsvpSession', DummySession)
     with pytest.raises(Exception) as exc:
-        await rsvp_service.ask_gemini_for_rsvp('topic')
+        await rsvp_service.ask_gemini_for_rsvp('topic', 'test_user_id')
     assert 'Error communicating with AI service' in str(exc.value)
 
 @pytest.mark.asyncio
@@ -31,7 +31,7 @@ async def test_ask_gemini_for_rsvp_network_error(monkeypatch):
     monkeypatch.setattr(httpx.AsyncClient, 'post', mock_post)
     monkeypatch.setattr(rsvp_service, 'RsvpSession', DummySession)
     with pytest.raises(Exception) as exc:
-        await rsvp_service.ask_gemini_for_rsvp('topic')
+        await rsvp_service.ask_gemini_for_rsvp('topic', 'test_user_id')
     assert 'Network error communicating with AI service' in str(exc.value)
 
 @pytest.mark.asyncio
@@ -42,5 +42,5 @@ async def test_ask_gemini_for_rsvp_malformed_response(monkeypatch):
     monkeypatch.setattr(httpx.AsyncClient, 'post', mock_post)
     monkeypatch.setattr(rsvp_service, 'RsvpSession', DummySession)
     with pytest.raises(Exception) as exc:
-        await rsvp_service.ask_gemini_for_rsvp('topic')
+        await rsvp_service.ask_gemini_for_rsvp('topic', 'test_user_id')
     assert 'Malformed response from AI service' in str(exc.value)

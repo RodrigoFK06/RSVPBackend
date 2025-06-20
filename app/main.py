@@ -1,23 +1,22 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 import sys
 from dotenv import load_dotenv
 import os
 
 from app.db.connection import connect_to_mongo
-
-#from app.models.session import ReadingSession
-from app.api.routes import router
 from app.api import rsvp_routes, auth_routes, quiz_routes, stats_routes, assistant_routes
+from app.api.routes import router
 
 # Cargar variables del archivo .env
 load_dotenv()
 
 # Configure Loguru
 logger.remove()  # Remove default handler
-logger.add(sys.stderr, level="INFO") # Log to stderr with INFO level
-logger.add("logs/error_{time}.log", level="ERROR", rotation="1 week") # Log errors to a file
+logger.add(sys.stderr, level="INFO")  # Log to stderr with INFO level
+logger.add("logs/error_{time}.log", level="ERROR", rotation="1 week")  # Log errors to a file
 
 # Verificar y mostrar claves críticas
 mongo_url = os.getenv("MONGO_URL")
@@ -35,6 +34,18 @@ print("✅ MONGO_URL y GEMINI_API_KEY cargados correctamente")
 
 # Crear instancia de la app
 app = FastAPI()
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",           # Frontend local
+        "https://ria-virid.vercel.app",    # Frontend en producción (Vercel)
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Exception handlers
 @app.exception_handler(Exception)
@@ -58,7 +69,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 async def app_init():
     await connect_to_mongo()
 
-# Registrar rutas de la API (ambas)
+# Registrar rutas
 app.include_router(router)
 app.include_router(rsvp_routes.router)
 app.include_router(auth_routes.router)

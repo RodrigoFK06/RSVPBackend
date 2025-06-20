@@ -119,19 +119,34 @@ async def generate_quiz_questions_from_text(text_content: str, num_questions: in
 async def create_or_update_quiz_for_session(rsvp_session_id: str, text_content: str, user: User) -> RsvpSession:
     session = await RsvpSession.get(rsvp_session_id)
     if not session:
-        raise FileNotFoundError("RsvpSession not found") # Or HTTPException
+        raise FileNotFoundError("RsvpSession not found")
+    
+    # Verificar que la sesión pertenece al usuario
+    if session.user_id != str(user.id):
+        raise PermissionError("User does not own this RsvpSession")
 
-    # For now, always generate new questions. Could add logic to check if quiz_questions already exist.
+    # Para evitar regenerar quizzes, verificar si ya existen
+    if session.quiz_questions and len(session.quiz_questions) > 0:
+        logger.info(f"Quiz questions already exist for session {rsvp_session_id}, returning existing")
+        return session
+
+    # Generar nuevas preguntas de quiz
     questions = await generate_quiz_questions_from_text(text_content)
 
     if not questions:
-            # Fallback or error if no questions could be generated
+        # Fallback o error si no se pudieron generar preguntas
         logger.warning(f"No quiz questions generated for session {rsvp_session_id}")
-        session.quiz_questions = [] # Ensure it's an empty list not None
+        session.quiz_questions = []  # Asegurar que sea una lista vacía, no None
     else:
         session.quiz_questions = questions
+        logger.info(f"Generated {len(questions)} quiz questions for session {rsvp_session_id}")
 
+    # Asegurar que word_count esté actualizado
+    session.update_word_count()
+    
     await session.save()
+    logger.info(f"Saved quiz questions and updated word count for session {rsvp_session_id}")
+    
     return session
 
 
@@ -205,6 +220,11 @@ async def validate_and_score_quiz_answers(
     session = await RsvpSession.get(rsvp_session_id)
     if not session:
         raise FileNotFoundError("RsvpSession not found")
+    
+    # Verificar que la sesión pertenece al usuario
+    if session.user_id != str(user.id):
+        raise PermissionError("User does not own this RsvpSession")
+    
     if not session.quiz_questions:
         raise ValueError("No quiz questions found for this session")
 
@@ -212,6 +232,8 @@ async def validate_and_score_quiz_answers(
     correct_answers_count = 0
 
     questions_map = {q.id: q for q in session.quiz_questions}
+
+    logger.info(f"Validating {len(user_answers)} answers for session {rsvp_session_id} by user {user.email}")
 
     for answer_input in user_answers:
         question = questions_map.get(answer_input.question_id)
@@ -267,5 +289,7 @@ async def validate_and_score_quiz_answers(
         overall_score=round(overall_score, 2)
     )
     await quiz_attempt.insert()
+
+    logger.info(f"Quiz attempt created for user {user.email}, session {rsvp_session_id}, score: {overall_score}")
 
     return quiz_attempt

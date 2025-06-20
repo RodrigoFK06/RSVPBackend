@@ -1,4 +1,4 @@
-from beanie import Document
+from beanie import Document, Indexed
 from pydantic import Field
 from datetime import datetime
 from typing import List, Optional, Literal
@@ -8,7 +8,7 @@ class RsvpSession(Document):
     topic: str
     text: str
     words: List[str]
-    user_id: Optional[str] = None
+    user_id: Indexed(str)  # Ahora es obligatorio y está indexado para mejor rendimiento
     created_at: datetime = Field(default_factory=datetime.utcnow)
     quiz_questions: Optional[List[QuizQuestion]] = None
     ai_estimated_ideal_reading_time_seconds: Optional[int] = None

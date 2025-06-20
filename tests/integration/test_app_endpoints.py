@@ -8,7 +8,9 @@ from app.api import rsvp_routes, assistant_routes, quiz_routes
 
 @pytest.fixture(autouse=True)
 def mock_gemini(monkeypatch):
-    async def fake_ask_gemini_for_rsvp(topic: str, user_id: str | None = None) -> RsvpOutput:
+    async def fake_ask_gemini_for_rsvp(topic: str, user_id: str) -> RsvpOutput:
+        if not user_id:
+            raise ValueError("user_id is required")
         session = RsvpSession(topic=topic, text="Mock text", words=["Mock", "text"], user_id=user_id)
         await session.insert()
         return RsvpOutput(id=str(session.id), text=session.text, words=session.words)
