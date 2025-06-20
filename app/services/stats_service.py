@@ -10,6 +10,7 @@ from app.schemas.stats import (
     SessionStatDetail,
     PersonalizedFeedback,
 )
+from app.utils.timezone import convert_utc_to_local
 # Potentially an AI service for personalized feedback later
 # from app.services.gemini_service import generate_personalized_stats_feedback
 
@@ -20,7 +21,10 @@ class StatsService:
 
         # Fetch user's sessions and quiz attempts
         user_sessions = (
-            await RsvpSession.find(RsvpSession.user_id == user_id_str)
+            await RsvpSession.find(
+                RsvpSession.user_id == user_id_str,
+                RsvpSession.deleted == False,
+            )
             .sort(-RsvpSession.created_at)
             .to_list()
         )
@@ -99,6 +103,7 @@ class StatsService:
                     ai_text_difficulty=session.ai_text_difficulty,
                     ai_estimated_ideal_reading_time_seconds=session.ai_estimated_ideal_reading_time_seconds,
                     created_at=session.created_at,
+                    created_at_local=convert_utc_to_local(session.created_at),
                 )
             )
 

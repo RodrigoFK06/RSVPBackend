@@ -118,7 +118,7 @@ async def generate_quiz_questions_from_text(text_content: str, num_questions: in
 
 async def create_or_update_quiz_for_session(rsvp_session_id: str, text_content: str, user: User) -> RsvpSession:
     session = await RsvpSession.get(rsvp_session_id)
-    if not session:
+    if not session or session.deleted:
         raise FileNotFoundError("RsvpSession not found") # Or HTTPException
 
     # For now, always generate new questions. Could add logic to check if quiz_questions already exist.
@@ -203,7 +203,7 @@ async def validate_and_score_quiz_answers(
     user: User
 ) -> QuizAttempt:
     session = await RsvpSession.get(rsvp_session_id)
-    if not session:
+    if not session or session.deleted:
         raise FileNotFoundError("RsvpSession not found")
     if not session.quiz_questions:
         raise ValueError("No quiz questions found for this session")

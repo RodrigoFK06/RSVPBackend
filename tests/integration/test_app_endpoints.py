@@ -100,3 +100,23 @@ async def test_assistant_endpoint(client: AsyncClient, authenticated_user_token:
     )
     assert assistant_resp.status_code == 200
     assert assistant_resp.json()["response"] == "Mock assistant response"
+
+
+@pytest.mark.asyncio
+async def test_delete_rsvp_session(client: AsyncClient, authenticated_user_token: dict):
+    headers = get_headers(authenticated_user_token)
+
+    rsvp_resp = await client.post("/api/rsvp", json={"topic": "history"}, headers=headers)
+    session_id = rsvp_resp.json()["id"]
+
+    stats_before = await client.get("/api/stats", headers=headers)
+    assert session_id in [s["session_id"] for s in stats_before.json()["recent_sessions_stats"]]
+
+    del_resp = await client.delete(f"/api/rsvp/{session_id}", headers=headers)
+    assert del_resp.status_code == 204
+
+    stats_after = await client.get("/api/stats", headers=headers)
+    assert session_id not in [s["session_id"] for s in stats_after.json()["recent_sessions_stats"]]
+
+    get_resp = await client.get(f"/api/rsvp/{session_id}", headers=headers)
+    assert get_resp.status_code == 404

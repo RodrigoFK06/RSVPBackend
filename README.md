@@ -194,7 +194,8 @@ Return aggregated statistics for the current user. Example response:
       "quiz_score": 100.0,
       "ai_text_difficulty": "easy",
       "ai_estimated_ideal_reading_time_seconds": 60,
-      "created_at": "2025-01-01T12:00:00Z"
+      "created_at": "2025-01-01T12:00:00Z",
+      "created_at_local": "2025-01-01T07:00:00-05:00"
     }
   ],
   "personalized_feedback": null
