@@ -13,6 +13,7 @@ class SessionStatDetail(BaseModel):
     ai_text_difficulty: Optional[str] = None
     ai_estimated_ideal_reading_time_seconds: Optional[int] = None
     created_at: datetime
+    created_at_local: Optional[datetime] = None
 
 class UserOverallStats(BaseModel):
     total_sessions_read: int

@@ -19,7 +19,7 @@ async def create_quiz(
     current_user: User = Depends(get_current_active_user)
 ):
     rsvp_session = await RsvpSession.get(quiz_input.rsvp_session_id)
-    if not rsvp_session:
+    if not rsvp_session or rsvp_session.deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RsvpSession not found")
     if rsvp_session.user_id != str(current_user.id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have access to this RSVP session's content")

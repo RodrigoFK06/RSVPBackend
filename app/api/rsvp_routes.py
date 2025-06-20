@@ -29,7 +29,7 @@ async def get_rsvp_session(
     current_user: User = Depends(get_current_active_user),
 ):
     session = await RsvpSession.get(session_id)
-    if not session:
+    if not session or session.deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sesión no encontrada")
 
     if session.user_id != str(current_user.id):
@@ -40,3 +40,18 @@ async def get_rsvp_session(
         text=session.text,
         words=session.words,
     )
+
+
+@router.delete("/api/rsvp/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_rsvp_session(
+    session_id: str = Path(..., description="ID de la sesión RSVP"),
+    current_user: User = Depends(get_current_active_user),
+):
+    session = await RsvpSession.get(session_id)
+    if not session or session.deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sesión no encontrada")
+    if session.user_id != str(current_user.id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not own this session")
+    session.deleted = True
+    await session.save()
+    return None

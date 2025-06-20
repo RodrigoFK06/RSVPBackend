@@ -9,6 +9,7 @@ class RsvpSession(Document):
     text: str
     words: List[str]
     user_id: Optional[str] = None
+    deleted: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     quiz_questions: Optional[List[QuizQuestion]] = None
     ai_estimated_ideal_reading_time_seconds: Optional[int] = None
