@@ -73,7 +73,8 @@ async def validate_quiz_answers(
         quiz_attempt_doc = await quiz_service.validate_and_score_quiz_answers(
             rsvp_session_id=validation_input.rsvp_session_id,
             user_answers=validation_input.answers,
-            user=current_user
+            user=current_user,
+            reading_time_seconds=validation_input.reading_time_seconds,
         )
 
         # Convert QuizAttempt document to QuizValidateOutput Pydantic model

@@ -15,6 +15,10 @@ class RsvpSession(Document):
     ai_estimated_ideal_reading_time_seconds: Optional[int] = None
     ai_text_difficulty: Optional[Literal["easy", "medium", "hard", "unknown"]] = Field(default="unknown")
     word_count: Optional[int] = None
+    reading_time_seconds: Optional[int] = None
+    wpm: Optional[float] = None
+    quiz_score: Optional[float] = None
+    quiz_taken: bool = Field(default=False)
 
     def update_word_count(self):
         if self.text:

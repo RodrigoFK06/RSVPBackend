@@ -9,3 +9,7 @@ class RsvpOutput(BaseModel):
     id: str
     text: str
     words: List[str]
+    reading_time_seconds: Optional[int] = None
+    wpm: Optional[float] = None
+    quiz_score: Optional[float] = None
+    quiz_taken: bool = False
