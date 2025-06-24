@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm # For a more standard login form if preferred
+from starlette.responses import JSONResponse
+
 from app.schemas.user import UserCreate, UserOut
 from app.schemas.auth import Token, UserLogin
 from app.models.user import User
@@ -58,7 +60,7 @@ async def register_user(user_in: UserCreate):
 
 
 @router.post("/login", response_model=Token)
-async def login_for_access_token(form_data: UserLogin): # Using UserLogin schema
+async def login_for_access_token(form_data: UserLogin):
     user = await UserService.get_user_by_email(form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
@@ -74,6 +76,20 @@ async def login_for_access_token(form_data: UserLogin): # Using UserLogin schema
 
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.options("/login")
+async def preflight_login():
+    return JSONResponse(
+        status_code=200,
+        content={"detail": "CORS preflight OK"},
+        headers={
+            "Access-Control-Allow-Origin": "https://ria-virid.vercel.app",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        }
+    )
+
 
 # Alternative login using OAuth2PasswordRequestForm for form data (Content-Type: application/x-www-form-urlencoded)
 # @router.post("/token", response_model=Token)
