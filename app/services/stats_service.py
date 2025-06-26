@@ -1,4 +1,5 @@
 from typing import List, Dict
+from datetime import datetime, timedelta
 from loguru import logger
 
 from app.models.user import User
@@ -57,6 +58,112 @@ class StatsService:
             best_scores = [max(scores) for scores in session_scores.values()]
             average_quiz_score = round(sum(best_scores) / total_quizzes_taken, 2)
 
+        # --- Compute Period Comparisons ---
+        now = datetime.utcnow()
+        current_start = now - timedelta(days=30)
+        previous_start = now - timedelta(days=60)
+
+        current_sessions = [
+            s for s in user_sessions if s.created_at >= current_start
+        ]
+        previous_sessions = [
+            s
+            for s in user_sessions
+            if previous_start <= s.created_at < current_start
+        ]
+
+        def period_metrics(sessions: List[RsvpSession]):
+            reading_time = sum(
+                (
+                    s.reading_time_seconds
+                    or s.ai_estimated_ideal_reading_time_seconds
+                    or 0
+                )
+                for s in sessions
+            )
+            words = sum(s.word_count or 0 for s in sessions)
+            wpm = None
+            if reading_time > 0 and words > 0:
+                wpm = round((words / reading_time) * 60, 2)
+            scores: List[float] = []
+            for s in sessions:
+                sc = session_scores.get(str(s.id), [])
+                if sc:
+                    scores.append(max(sc))
+                elif s.quiz_score is not None:
+                    scores.append(s.quiz_score)
+            comp = None
+            if scores:
+                comp = round(sum(scores) / len(scores), 2)
+            return reading_time, words, wpm, comp
+
+        (
+            curr_reading_time,
+            _curr_words,
+            curr_wpm,
+            curr_comp,
+        ) = period_metrics(current_sessions)
+        (
+            prev_reading_time,
+            _prev_words,
+            prev_wpm,
+            prev_comp,
+        ) = period_metrics(previous_sessions)
+
+        def calc_delta(curr: float | int | None, prev: float | int | None):
+            if curr is None or prev is None or prev == 0:
+                return None
+            return round(((curr - prev) / prev) * 100, 2)
+
+        delta_wpm = calc_delta(curr_wpm, prev_wpm)
+        delta_comprehension = calc_delta(curr_comp, prev_comp)
+        delta_reading_time = calc_delta(curr_reading_time, prev_reading_time)
+
+        def trend(delta: float | None):
+            if delta is None:
+                return None
+            if delta > 5:
+                return "up"
+            if delta < -5:
+                return "down"
+            return "stable"
+
+        wpm_trend = trend(delta_wpm)
+        comprehension_trend = trend(delta_comprehension)
+
+        reading_progress_percent = None
+        if len(user_sessions) >= 10:
+            sorted_sessions = sorted(user_sessions, key=lambda s: s.created_at)
+
+            def session_wpm(s: RsvpSession):
+                if s.wpm is not None:
+                    return s.wpm
+                if s.reading_time_seconds and s.word_count:
+                    return round((s.word_count / s.reading_time_seconds) * 60, 2)
+                if (
+                    s.ai_estimated_ideal_reading_time_seconds
+                    and s.word_count
+                ):
+                    return round(
+                        (s.word_count / s.ai_estimated_ideal_reading_time_seconds)
+                        * 60,
+                        2,
+                    )
+                return None
+
+            first5 = sorted_sessions[:5]
+            last5 = sorted_sessions[-5:]
+            first_wpms = [session_wpm(s) for s in first5 if session_wpm(s) is not None]
+            last_wpms = [session_wpm(s) for s in last5 if session_wpm(s) is not None]
+            if first_wpms and last_wpms:
+                first_avg = sum(first_wpms) / len(first_wpms)
+                last_avg = sum(last_wpms) / len(last_wpms)
+                if first_avg != 0:
+                    reading_progress_percent = round(
+                        ((last_avg - first_avg) / first_avg) * 100,
+                        2,
+                    )
+
         overall_stats = UserOverallStats(
             total_sessions_read=total_sessions_read,
             total_reading_time_seconds=total_reading_time_seconds,
@@ -64,6 +171,12 @@ class StatsService:
             average_wpm=average_wpm,
             total_quizzes_taken=total_quizzes_taken,
             average_quiz_score=average_quiz_score,
+            delta_wpm_vs_previous=delta_wpm,
+            delta_comprehension_vs_previous=delta_comprehension,
+            delta_reading_time_vs_previous=delta_reading_time,
+            reading_progress_percent=reading_progress_percent,
+            wpm_trend=wpm_trend,
+            comprehension_trend=comprehension_trend,
         )
 
         # --- Prepare Recent Sessions Stats ---
