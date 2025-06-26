@@ -22,6 +22,12 @@ class UserOverallStats(BaseModel):
     average_wpm: Optional[float] = None
     total_quizzes_taken: int
     average_quiz_score: Optional[float] = None # Percentage
+    delta_wpm_vs_previous: Optional[float] = None
+    delta_comprehension_vs_previous: Optional[float] = None
+    delta_reading_time_vs_previous: Optional[float] = None
+    reading_progress_percent: Optional[float] = None
+    wpm_trend: Optional[str] = None  # "up", "down", "stable"
+    comprehension_trend: Optional[str] = None
 
 class PersonalizedFeedback(BaseModel):
     feedback_text: str
