@@ -1,3 +1,4 @@
+from bson import ObjectId
 from fastapi import APIRouter, HTTPException, Depends, status
 from loguru import logger
 from typing import List
@@ -81,16 +82,22 @@ async def get_rsvp_session(
     )
 
 
-@router.delete("/api/rsvp/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/api/rsvp/{session_id}", status_code=status.HTTP_200_OK)
 async def delete_rsvp_session(
     session_id: str = Path(..., description="ID de la sesión RSVP"),
     current_user: User = Depends(get_current_active_user),
 ):
+    if not ObjectId.is_valid(session_id):
+        raise HTTPException(status_code=400, detail="ID inválido")
+
     session = await RsvpSession.get(session_id)
     if not session or session.deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sesión no encontrada")
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+
     if session.user_id != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not own this session")
+        raise HTTPException(status_code=403, detail="No tienes permiso para eliminar esta sesión")
+
     session.deleted = True
     await session.save()
-    return None
+
+    return {"message": "Sesión eliminada correctamente"}
