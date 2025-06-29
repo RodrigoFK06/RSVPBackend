@@ -64,7 +64,13 @@ async def get_rsvp_session(
     session_id: str = Path(..., description="ID de la sesión RSVP"),
     current_user: User = Depends(get_current_active_user),
 ):
-    session = await RsvpSession.get(session_id)
+    from bson import ObjectId
+
+    if ObjectId.is_valid(session_id):
+        session = await RsvpSession.get(session_id)
+    else:
+        raise HTTPException(status_code=400, detail="ID de sesión inválido")
+
     if not session or session.deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sesión no encontrada")
 

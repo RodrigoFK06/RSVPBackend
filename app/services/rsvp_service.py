@@ -10,7 +10,35 @@ GEMINI_RSVP_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemin
 async def ask_gemini_for_rsvp(topic: str, user_id: str) -> RsvpOutput:
     if not user_id:
         raise ValueError("user_id is required to create RSVP session")
-        
+
+    # 👉 Modo texto personalizado
+    if topic.startswith("__raw__:"):
+        raw_text = topic.replace("__raw__:", "", 1).strip()
+        if not raw_text:
+            raise ValueError("Texto personalizado vacío")
+
+        words = raw_text.replace("\n", " ").split()
+        words = [word for word in words if word.strip()]
+
+        session = RsvpSession(
+            topic="Texto personalizado",
+            text=raw_text,
+            words=words,
+            user_id=user_id
+        )
+
+        session.update_word_count()
+        await session.insert()
+
+        logger.info(f"Created custom RSVP session {session.id} for user {user_id} with {len(words)} words")
+
+        return RsvpOutput(
+            id=str(session.id),
+            text=session.text,
+            words=session.words,
+        )
+
+    # 👉 Modo generación con Gemini
     prompt = (
         f"Escribe un texto informativo extenso pero claro sobre el siguiente tema, "
         f"dirigido a lectores entre 15-20 años. Usa lenguaje sencillo, 3 párrafos como máximo. Tema: {topic}"
@@ -42,22 +70,20 @@ async def ask_gemini_for_rsvp(topic: str, user_id: str) -> RsvpOutput:
         logger.error(f"Malformed Gemini RSVP response: {e}. Response: {res.text}")
         raise Exception("Malformed response from AI service.")
 
-    # Asegurar que el texto no esté vacío
     if not text or not text.strip():
         logger.error(f"Gemini returned empty text for topic: {topic}")
         raise Exception("AI service returned empty text content.")
 
     words = text.replace("\n", " ").split()
-    words = [word for word in words if word.strip()]  # Filtrar palabras vacías
+    words = [word for word in words if word.strip()]
 
     session = RsvpSession(
-        topic=topic, 
-        text=text.strip(), 
-        words=words, 
+        topic=topic,
+        text=text.strip(),
+        words=words,
         user_id=user_id
     )
-    
-    # Actualizar word count antes de guardar
+
     session.update_word_count()
     await session.insert()
 
